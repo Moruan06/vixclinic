@@ -101,7 +101,20 @@ export const Auth = () => {
         });
         setErrors(fieldErrors);
       } else {
-        toast.error(error.message || 'Erro na autenticação');
+        // Mapear erros comuns do Supabase para mensagens em português
+        let errorMessage = 'Erro na autenticação';
+        
+        if (error.message?.includes('Email not confirmed')) {
+          errorMessage = 'Seu email ainda não foi confirmado. Verifique sua caixa de entrada.';
+        } else if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos. Verifique seus dados e tente novamente.';
+        } else if (error.message?.includes('User already registered')) {
+          errorMessage = 'Este email já está cadastrado. Use o formulário de login.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        toast.error(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -130,8 +143,8 @@ export const Auth = () => {
           </CardTitle>
           <CardDescription>
             {isSignup 
-              ? 'Configure seu acesso ao sistema'
-              : 'Entre com suas credenciais'
+              ? 'Crie o primeiro acesso ao sistema. Esta conta terá acesso completo.'
+              : 'Entre com seu email e senha para acessar o sistema.'
             }
           </CardDescription>
         </CardHeader>
