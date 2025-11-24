@@ -43,17 +43,7 @@ export const Funcionarios: React.FC = () => {
 
       if (error) throw error;
 
-      // Get all admin emails from administradores table
-      const { data: admins } = await supabase
-        .from('administradores')
-        .select('email');
-
-      const adminEmails = new Set((admins || []).map(a => a.email));
-
-      // Filter out admins from funcionarios list
-      const filteredData = (data || []).filter(func => !adminEmails.has(func.email));
-
-      const mappedEmployees: User[] = filteredData.map(func => ({
+      const mappedEmployees: User[] = (data || []).map(func => ({
         id: func.idfuncionario.toString(),
         name: func.nomecompleto,
         email: func.email,

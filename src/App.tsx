@@ -11,8 +11,7 @@ import { Vacinas } from "@/pages/Vacinas";
 import { Agendamentos } from "@/pages/Agendamentos";
 import { Relatorios } from "@/pages/Relatorios";
 import { Historico } from "@/pages/Historico";
-import { InitialSetup } from "@/pages/InitialSetup";
-import { Login } from "@/pages/Login";
+import { Auth } from "@/pages/Auth";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -28,8 +27,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             {/* Public routes */}
-            <Route path="/setup" element={<InitialSetup />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/auth" element={<Auth />} />
             
             {/* Protected routes */}
             <Route path="/" element={

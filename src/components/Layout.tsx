@@ -14,14 +14,14 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
       toast.success('Logout realizado com sucesso!');
-      navigate('/login');
+      navigate('/auth');
     } catch (error) {
       toast.error('Erro ao fazer logout');
     }
@@ -43,11 +43,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
-                {isAdmin && (
-                  <Badge variant="default" className="bg-medical-blue">
-                    Administrador
-                  </Badge>
-                )}
               </div>
               <Button
                 variant="ghost"
