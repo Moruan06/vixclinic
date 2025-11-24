@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ const authSchema = z.object({
 
 export const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   const [checkingUsers, setCheckingUsers] = useState(true);
@@ -38,6 +39,13 @@ export const Auth = () => {
   useEffect(() => {
     checkExistingUsers();
   }, []);
+
+  // Re-verificar quando voltar para a página /auth (após logout, por exemplo)
+  useEffect(() => {
+    if (location.pathname === '/auth') {
+      checkExistingUsers();
+    }
+  }, [location.pathname]);
 
   const checkExistingUsers = async () => {
     try {
