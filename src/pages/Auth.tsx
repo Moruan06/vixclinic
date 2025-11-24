@@ -9,16 +9,18 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Stethoscope } from 'lucide-react';
 
-const authSchema = z.object({
+// Schema para LOGIN (apenas email e senha)
+const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-  confirmarSenha: z.string().optional()
-}).refine((data) => {
-  if (data.confirmarSenha !== undefined) {
-    return data.senha === data.confirmarSenha;
-  }
-  return true;
-}, {
+});
+
+// Schema para CADASTRO (com confirmação de senha)
+const signupSchema = z.object({
+  email: z.string().email('Email inválido'),
+  senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  confirmarSenha: z.string().min(6, 'Confirmação de senha obrigatória')
+}).refine((data) => data.senha === data.confirmarSenha, {
   message: 'As senhas não coincidem',
   path: ['confirmarSenha']
 });
@@ -71,7 +73,15 @@ export const Auth = () => {
     setLoading(true);
 
     try {
-      authSchema.parse(formData);
+      // Validar com schema apropriado
+      if (isSignup) {
+        signupSchema.parse(formData);
+      } else {
+        loginSchema.parse({
+          email: formData.email,
+          senha: formData.senha
+        });
+      }
 
       if (isSignup) {
         const { error } = await supabase.auth.signUp({
