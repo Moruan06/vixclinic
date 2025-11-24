@@ -41,16 +41,6 @@ CREATE TYPE public.agendamento_status AS ENUM (
 
 
 --
--- Name: app_role; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.app_role AS ENUM (
-    'admin',
-    'funcionario'
-);
-
-
---
 -- Name: cliente_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -120,6 +110,20 @@ $$;
 
 
 --
+-- Name: check_users_exist(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_users_exist() RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM auth.users LIMIT 1);
+END;
+$$;
+
+
+--
 -- Name: finaliza_agendamento_apos_aplicacao(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -135,21 +139,6 @@ BEGIN
     
     RETURN NEW;
 END;
-$$;
-
-
---
--- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id AND role = _role
-  )
 $$;
 
 
@@ -313,18 +302,6 @@ $$;
 SET default_table_access_method = heap;
 
 --
--- Name: administradores; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.administradores (
-    id uuid NOT NULL,
-    nome_clinica character varying(255) NOT NULL,
-    email character varying(255) NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: agendamento; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -412,18 +389,6 @@ CREATE TABLE public.cliente (
     alergias text,
     observacoes text,
     status public.cliente_status DEFAULT 'ATIVO'::public.cliente_status NOT NULL
-);
-
-
---
--- Name: configuracao_sistema; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.configuracao_sistema (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    nome_clinica character varying(255),
-    setup_completo boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -539,18 +504,6 @@ ALTER SEQUENCE public.lote_numlote_seq OWNED BY public.lote.numlote;
 
 
 --
--- Name: user_roles; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_roles (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    user_id uuid NOT NULL,
-    role public.app_role NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: vacina; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -631,22 +584,6 @@ ALTER TABLE ONLY public.vacina ALTER COLUMN idvacina SET DEFAULT nextval('public
 
 
 --
--- Name: administradores administradores_email_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.administradores
-    ADD CONSTRAINT administradores_email_key UNIQUE (email);
-
-
---
--- Name: administradores administradores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.administradores
-    ADD CONSTRAINT administradores_pkey PRIMARY KEY (id);
-
-
---
 -- Name: agendamento agendamento_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -668,14 +605,6 @@ ALTER TABLE ONLY public.aplicacao
 
 ALTER TABLE ONLY public.cliente
     ADD CONSTRAINT cliente_pkey PRIMARY KEY (cpf);
-
-
---
--- Name: configuracao_sistema configuracao_sistema_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.configuracao_sistema
-    ADD CONSTRAINT configuracao_sistema_pkey PRIMARY KEY (id);
 
 
 --
@@ -724,22 +653,6 @@ ALTER TABLE ONLY public.lote
 
 ALTER TABLE ONLY public.lote
     ADD CONSTRAINT lote_pkey PRIMARY KEY (numlote);
-
-
---
--- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_pkey PRIMARY KEY (id);
-
-
---
--- Name: user_roles user_roles_user_id_role_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role);
 
 
 --
@@ -961,14 +874,6 @@ CREATE TRIGGER trigger_atualiza_estoque_apos_aplicacao AFTER INSERT ON public.ap
 
 
 --
--- Name: administradores administradores_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.administradores
-    ADD CONSTRAINT administradores_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
-
-
---
 -- Name: agendamento agendamento_cliente_cpf_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1097,106 +1002,6 @@ ALTER TABLE ONLY public.lote
 
 
 --
--- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
-
-
---
--- Name: funcionario Admins podem atualizar funcionarios; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem atualizar funcionarios" ON public.funcionario FOR UPDATE USING (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: funcionario Admins podem deletar funcionarios; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem deletar funcionarios" ON public.funcionario FOR DELETE USING (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: funcionario Admins podem gerenciar funcionarios; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem gerenciar funcionarios" ON public.funcionario USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: funcionario Admins podem inserir funcionarios; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem inserir funcionarios" ON public.funcionario FOR INSERT WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: user_roles Admins podem inserir roles; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem inserir roles" ON public.user_roles FOR INSERT WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: administradores Admins podem ver administradores; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem ver administradores" ON public.administradores FOR SELECT USING ((EXISTS ( SELECT 1
-   FROM public.user_roles
-  WHERE ((user_roles.user_id = auth.uid()) AND (user_roles.role = 'admin'::public.app_role)))));
-
-
---
--- Name: funcionario Admins podem ver funcionarios; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem ver funcionarios" ON public.funcionario FOR SELECT USING (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: user_roles Admins podem ver todos os roles; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins podem ver todos os roles" ON public.user_roles FOR SELECT USING (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: configuracao_sistema Apenas admins podem atualizar configuracao_sistema; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Apenas admins podem atualizar configuracao_sistema" ON public.configuracao_sistema FOR UPDATE USING ((EXISTS ( SELECT 1
-   FROM public.user_roles
-  WHERE ((user_roles.user_id = auth.uid()) AND (user_roles.role = 'admin'::public.app_role)))));
-
-
---
--- Name: administradores Permitir inserção de primeiro admin; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Permitir inserção de primeiro admin" ON public.administradores FOR INSERT WITH CHECK ((NOT (EXISTS ( SELECT 1
-   FROM public.configuracao_sistema
-  WHERE (configuracao_sistema.setup_completo = true)))));
-
-
---
--- Name: user_roles Permitir inserção de role no primeiro setup; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Permitir inserção de role no primeiro setup" ON public.user_roles FOR INSERT WITH CHECK ((NOT (EXISTS ( SELECT 1
-   FROM public.configuracao_sistema
-  WHERE (configuracao_sistema.setup_completo = true)))));
-
-
---
--- Name: configuracao_sistema Permitir leitura configuracao_sistema; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Permitir leitura configuracao_sistema" ON public.configuracao_sistema FOR SELECT USING (true);
-
-
---
 -- Name: agendamento Usuarios autenticados podem atualizar agendamentos; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1264,6 +1069,13 @@ CREATE POLICY "Usuarios autenticados podem deletar lotes" ON public.lote FOR DEL
 --
 
 CREATE POLICY "Usuarios autenticados podem deletar vacinas" ON public.vacina FOR DELETE USING ((auth.role() = 'authenticated'::text));
+
+
+--
+-- Name: funcionario Usuarios autenticados podem gerenciar funcionarios; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Usuarios autenticados podem gerenciar funcionarios" ON public.funcionario TO authenticated USING ((auth.uid() IS NOT NULL)) WITH CHECK ((auth.uid() IS NOT NULL));
 
 
 --
@@ -1351,19 +1163,6 @@ CREATE POLICY "Usuarios autenticados podem ver vacinas" ON public.vacina FOR SEL
 
 
 --
--- Name: user_roles Usuários podem ver seu próprio role; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Usuários podem ver seu próprio role" ON public.user_roles FOR SELECT USING ((user_id = auth.uid()));
-
-
---
--- Name: administradores; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.administradores ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: agendamento; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1382,12 +1181,6 @@ ALTER TABLE public.aplicacao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cliente ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: configuracao_sistema; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.configuracao_sistema ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: funcionario; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1404,12 +1197,6 @@ ALTER TABLE public.historico_aplicacoes_cliente ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.lote ENABLE ROW LEVEL SECURITY;
-
---
--- Name: user_roles; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: vacina; Type: ROW SECURITY; Schema: public; Owner: -
